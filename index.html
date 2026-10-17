@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Libreta del Voyage</title>
+<meta name="theme-color" content="#17212b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Voyage">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: una columna angosta tipo libreta de taller; cuentakilómetros arriba, pestañas pegajosas, listas por sección. */
+:root {
+  --bg: #eceff2;
+  --surface: #ffffff;
+  --sunken: #f5f7f9;
+  --ink: #17212b;
+  --muted: #5a6775;
+  --line: #d3dae1;
+  --accent: #1d5f8a;
+  --accent-ink: #ffffff;
+  --ok: #2c7a4b;   --ok-bg: #e3f2e9;
+  --warn: #9a5b00; --warn-bg: #fbefd9;
+  --bad: #b3261e;  --bad-bg: #fbe4e2;
+  --odo-bg: #17212b;
+  --odo-fg: #f2f4f6;
+  --odo-cell: #253240;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: light;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f151b; --surface: #18212a; --sunken: #131b22; --ink: #e5eaef; --muted: #9ba8b5; --line: #2b3743;
+    --accent: #72b4e0; --accent-ink: #0f151b;
+    --ok: #63c48f; --ok-bg: rgba(99, 196, 143, .14);
+    --warn: #f0a845; --warn-bg: rgba(240, 168, 69, .15);
+    --bad: #f27a70; --bad-bg: rgba(242, 122, 112, .15);
+    --odo-bg: #070b0f; --odo-fg: #f2f4f6; --odo-cell: #18222c;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--odo-bg);
+}
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+/* Cabecera / cuentakilómetros */
+.top { background: var(--odo-bg); color: var(--odo-fg); }
+.top .wrap { padding-block: 20px 18px; display: grid; gap: 14px; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 30px; letter-spacing: .01em; text-transform: uppercase; line-height: 1; }
+.brand small { display: block; margin-top: 4px; font-size: 13px; color: color-mix(in srgb, var(--odo-fg) 65%, transparent); letter-spacing: .06em; text-transform: uppercase; }
+.btn-data { background: transparent; color: var(--odo-fg); border: 1px solid color-mix(in srgb, var(--odo-fg) 30%, transparent); border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: 14px; }
+.odo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.odo label { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: color-mix(in srgb, var(--odo-fg) 65%, transparent); width: 100%; }
+.odo-field { display: flex; align-items: center; gap: 8px; background: var(--odo-cell); border-radius: 8px; padding: 6px 12px; border: 1px solid color-mix(in srgb, var(--odo-fg) 14%, transparent); min-width: 0; flex: 1 1 220px; max-width: 320px; }
+.odo-field input {
+  background: transparent; border: 0; color: var(--odo-fg); font-family: var(--f-mono); font-weight: 700;
+  font-size: 30px; letter-spacing: .08em; width: 100%; min-width: 0; font-variant-numeric: tabular-nums; padding: 0;
+}
+.odo-field input:focus { outline: none; }
+.odo-field:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.odo-field span { font-family: var(--f-display); font-size: 18px; color: color-mix(in srgb, var(--odo-fg) 60%, transparent); }
+.btn-odo { background: var(--odo-fg); color: var(--odo-bg); border: 0; border-radius: 8px; padding: 12px 16px; font-weight: 600; }
+.odo-meta { font-size: 13px; color: color-mix(in srgb, var(--odo-fg) 65%, transparent); width: 100%; }
+
+/* Pestañas */
+.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.tabs .wrap { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding-block: 0; }
+.tabs .wrap::-webkit-scrollbar { display: none; }
+.tab { background: none; border: 0; border-bottom: 3px solid transparent; padding: 12px 10px 9px; white-space: nowrap; font-weight: 600; color: var(--muted); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+main .wrap { padding-block: 18px 64px; }
+.panel { display: grid; gap: 18px; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.panel-head h2 { margin: 0; font-family: var(--f-display); font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: .02em; text-wrap: balance; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 8px 12px; font-weight: 600; font-size: 14px; }
+.btn:hover { border-color: var(--accent); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn-danger { color: var(--bad); }
+.btn-danger.armed { background: var(--bad); color: #fff; border-color: var(--bad); }
+.btn-sm { padding: 5px 10px; font-size: 13px; }
+
+.group-title { margin: 4px 0 -6px; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.list { display: grid; gap: 10px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 8px; min-width: 0; }
+.card-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.card h3 { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.empty { background: var(--sunken); border: 1px dashed var(--line); border-radius: 10px; padding: 18px; color: var(--muted); }
+
+/* Resumen de mantenimiento */
+.summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sum { border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; }
+.sum b { font-family: var(--f-display); font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+.sum span { font-size: 13px; font-weight: 600; }
+.sum.bad { background: var(--bad-bg); color: var(--bad); }
+.sum.warn { background: var(--warn-bg); color: var(--warn); }
+.sum.ok { background: var(--ok-bg); color: var(--ok); }
+
+.part { border-left: 4px solid var(--line); }
+.part.bad { border-left-color: var(--bad); }
+.part.warn { border-left-color: var(--warn); }
+.part.ok { border-left-color: var(--ok); }
+.pill { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+.pill.bad { background: var(--bad-bg); color: var(--bad); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.ok { background: var(--ok-bg); color: var(--ok); }
+.pill.neutral { background: var(--sunken); color: var(--muted); border: 1px solid var(--line); }
+.status-line { font-weight: 600; font-variant-numeric: tabular-nums; }
+.status-line.bad { color: var(--bad); }
+.status-line.warn { color: var(--warn); }
+.bar { height: 6px; border-radius: 99px; background: var(--sunken); border: 1px solid var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); }
+.bar.warn i { background: var(--warn); }
+.bar.bad i { background: var(--bad); }
+.kms { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kms b { color: var(--ink); font-weight: 600; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; background: var(--sunken); border-radius: 8px; padding: 10px; }
+.inline-form input { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--surface); width: 140px; font-variant-numeric: tabular-nums; }
+
+/* Contactos */
+.contact-lines { display: grid; gap: 6px; font-size: 15px; }
+.cline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cline .val { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.cline a { font-size: 14px; font-weight: 600; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent); font-weight: 600; font-size: 14px; }
+.card.avoid { background: var(--bad-bg); border-color: color-mix(in srgb, var(--bad) 35%, transparent); }
+
+/* Marcas */
+.brand-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: start; padding: 10px 0; border-top: 1px solid var(--line); }
+.brand-row:first-child { border-top: 0; }
+.brand-row .pz { font-weight: 600; }
+.brand-row .mk { grid-column: 1 / -1; font-size: 15px; }
+.brand-box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px; }
+
+/* Hoja de edición */
+.sheet-back { position: fixed; inset: 0; background: rgba(10, 15, 20, .45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet {
+  background: var(--surface); width: 100%; max-width: 560px; max-height: 92%; overflow-y: auto;
+  border-radius: 14px 14px 0 0; display: grid; gap: 14px;
+  padding: 18px max(16px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+@media (min-width: 600px) { .sheet-back { align-items: center; } .sheet { border-radius: 14px; } }
+.sheet h2 { margin: 0; font-family: var(--f-display); font-size: 22px; text-transform: uppercase; }
+.sheet h3 { margin: 0; font-size: 16px; }
+.sheet p { margin: 0; }
+.sheet-section { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--muted); }
+.field input[type=text], .field input[type=url], .field select, .field textarea {
+  border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; background: var(--bg); width: 100%;
+}
+.field textarea { min-height: 80px; resize: vertical; }
+.field .hint { font-size: 12px; color: var(--muted); }
+.check { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.sheet-actions { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.sheet-actions div { display: flex; gap: 8px; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-weight: 600; z-index: 30; max-width: calc(100% - 32px);
+}
+.banner { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 12px 14px; font-weight: 500; display: grid; gap: 8px; justify-items: start; }
+.banner.info { background: var(--sunken); color: var(--ink); border: 1px solid var(--line); }
+@media (max-width: 420px) { .summary { gap: 6px; } .sum b { font-size: 24px; } .brand h1 { font-size: 26px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <div>
+        <h1>Libreta del Voyage</h1>
+        <small id="model">VW Voyage</small>
+      </div>
+      <button class="btn-data" type="button" id="open-data">Datos y copias</button>
+    </div>
+    <form class="odo" id="odo-form">
+      <label for="km">Kilometraje actual</label>
+      <div class="odo-field">
+        <input id="km" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000" aria-describedby="odo-meta">
+        <span>KM</span>
+      </div>
+      <button class="btn-odo" type="submit">Guardar km</button>
+      <div class="odo-meta" id="odo-meta"></div>
+    </form>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="Secciones">
+  <div class="wrap" role="tablist">
+    <button class="tab" role="tab" data-tab="mantenimiento" aria-selected="true">Mantenimiento</button>
+    <button class="tab" role="tab" data-tab="marcas" aria-selected="false">Marcas buenas</button>
+    <button class="tab" role="tab" data-tab="contactos" aria-selected="false">Contactos</button>
+    <button class="tab" role="tab" data-tab="notas" aria-selected="false">Fallas, links y tips</button>
+  </div>
+</nav>
+
+<main>
+  <div class="wrap">
+    <section class="panel" id="p-mantenimiento" role="tabpanel">
+      <div id="welcome" class="banner info" hidden>
+        <span><b>¡Bienvenido!</b> La libreta está vacía. Para traer tus datos: abrí la libreta de claude.ai, tocá “Pasar a la app sin internet”, copiá y pegalo acá.</span>
+        <button class="btn btn-primary btn-sm" type="button" data-open-data>Cargar mis datos</button>
+      </div>
+      <div id="backup-reminder" class="banner" hidden>
+        <span id="backup-reminder-text"></span>
+        <button class="btn btn-sm" type="button" data-open-data>Hacer copia</button>
+      </div>
+      <div class="panel-head">
+        <h2>Mantenimiento</h2>
+        <button class="btn" type="button" data-add="repuestos">+ Agregar repuesto</button>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="list" id="list-repuestos"></div>
+    </section>
+
+    <section class="panel" id="p-marcas" role="tabpanel" hidden>
+      <div class="panel-head">
+        <h2>Marcas buenas</h2>
+        <button class="btn" type="button" data-add="marcas">+ Agregar</button>
+      </div>
+      <div id="list-marcas" class="panel"></div>
+    </section>
+
+    <section class="panel" id="p-contactos" role="tabpanel" hidden>
+      <div class="panel-head">
+        <h2>Contactos</h2>
+        <button class="btn" type="button" data-add="contactos">+ Agregar contacto</button>
+      </div>
+      <div id="list-contactos" class="panel"></div>
+    </section>
+
+    <section class="panel" id="p-notas" role="tabpanel" hidden>
+      <div class="panel-head">
+        <h2>Fallas, links y tips</h2>
+        <button class="btn" type="button" data-add="notas">+ Agregar nota</button>
+      </div>
+      <div id="list-notas" class="panel"></div>
+    </section>
+  </div>
+</main>
+
+<div id="sheet-root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(() => {
+  const STORE_KEY = "libreta-voyage-v1";
+  const BACKUP_KEY = "libreta-voyage-ultima-copia";
+  const PRONTO_KM = 5000;
+  const BACKUP_DIAS = 30;
+  const COLS = ["repuestos", "contactos", "marcas", "notas"];
+  const RUBROS = ["Mecánico", "Chapa y pintura", "Instrumental", "Llantas", "Seguro", "Alquiler", "Otro"];
+  const GRUPOS = ["Motor", "Tren delantero", "Suspensión y ruedas", "Frenos", "Otros"];
+  const CATEGORIAS = ["Fallas (check engine)", "Datos del auto", "Links útiles", "Limpieza y cuidado", "Laburo"];
+
+  const SCHEMAS = {
+    repuestos: { title: "repuesto", fields: [
+      { k: "nombre", l: "Repuesto", t: "text", req: true },
+      { k: "cadaKm", l: "Se cambia cada (km)", t: "num", req: true },
+      { k: "ultimoKm", l: "Último cambio (km)", t: "num", req: true },
+      { k: "proximoKm", l: "Próximo cambio (km)", t: "num", hint: "Si lo dejás vacío, se calcula: último cambio + cada cuánto." },
+    ]},
+    contactos: { title: "contacto", fields: [
+      { k: "nombre", l: "Nombre", t: "text", req: true },
+      { k: "rubro", l: "Rubro", t: "select", opts: RUBROS },
+      { k: "telefono", l: "Teléfono", t: "text", hint: "Ej: 1169771985" },
+      { k: "direccion", l: "Dirección", t: "text" },
+      { k: "nota", l: "Nota", t: "area" },
+      { k: "evitar", l: "Evitar (no volver)", t: "check" },
+    ]},
+    marcas: { title: "marca", fields: [
+      { k: "pieza", l: "Repuesto", t: "text", req: true },
+      { k: "marcas", l: "Marcas", t: "text", req: true },
+      { k: "grupo", l: "Grupo", t: "select", opts: GRUPOS },
+      { k: "nota", l: "Nota", t: "text" },
+    ]},
+    notas: { title: "nota", fields: [
+      { k: "categoria", l: "Categoría", t: "select", opts: CATEGORIAS },
+      { k: "titulo", l: "Título", t: "text", req: true },
+      { k: "texto", l: "Detalle", t: "area" },
+      { k: "url", l: "Link", t: "url" },
+    ]},
+  };
+
+  const $ = (s) => document.querySelector(s);
+  const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (n) => Number(n).toLocaleString("es-AR");
+  const parseKm = (s) => { const d = String(s ?? "").replace(/\D/g, ""); return d ? Number(d) : null; };
+  const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
+  const today = () => new Date().toISOString().slice(0, 10);
+  const fmtDate = (iso) => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
+
+  /* ---------- Datos guardados en el celu ---------- */
+  function emptyStore() { return { auto: null, repuestos: [], contactos: [], marcas: [], notas: [] }; }
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return emptyStore();
+      return normalize(JSON.parse(raw));
+    } catch (_) { return emptyStore(); }
+  }
+  function normalize(d) {
+    if (!d || typeof d !== "object") throw new Error("formato");
+    const out = emptyStore();
+    out.auto = d.auto && typeof d.auto === "object" ? d.auto : null;
+    for (const c of COLS) {
+      if (d[c] != null && !Array.isArray(d[c])) throw new Error("formato");
+      out[c] = (d[c] || []).filter((x) => x && typeof x === "object").map((x) => ({ ...x, id: String(x.id || newId()) }));
+    }
+    return out;
+  }
+  let store = loadStore();
+  function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(store)); }
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
+
+  let toastTimer;
+  function toast(msg) {
+    const t = $("#toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+  function save(mutate, okMsg = "Guardado") {
+    const before = JSON.stringify(store);
+    try { mutate(); persist(); renderAll(); toast(okMsg); return true; }
+    catch (_) {
+      store = JSON.parse(before);
+      toast("No se pudo guardar en el celu. Revisá que tenga espacio libre.");
+      return false;
+    }
+  }
+
+  /* ---------- Pestañas ---------- */
+  const TABS = ["mantenimiento", "marcas", "contactos", "notas"];
+  function showTab(name) {
+    if (!TABS.includes(name)) name = "mantenimiento";
+    document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
+    TABS.forEach((t) => { $("#p-" + t).hidden = t !== name; });
+    try { localStorage.setItem("voyage-tab", name); } catch (_) {}
+  }
+  document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.tab)));
+  let startTab = (location.hash || "").slice(1);
+  if (!startTab) { try { startTab = localStorage.getItem("voyage-tab") || ""; } catch (_) {} }
+  showTab(startTab);
+
+  /* ---------- Kilometraje ---------- */
+  const kmInput = $("#km");
+  kmInput.addEventListener("input", () => {
+    const n = parseKm(kmInput.value);
+    kmInput.value = n == null ? "" : fmt(n);
+  });
+  $("#odo-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const n = parseKm(kmInput.value);
+    if (n == null) { toast("Escribí el kilometraje, por ejemplo 340.000."); return; }
+    kmInput.blur();
+    save(() => { store.auto = { modelo: "VW Voyage", kmPorMes: 4000, ...(store.auto || {}), kmActual: n, actualizado: today() }; }, "Kilometraje guardado");
+  });
+  function renderAuto() {
+    const a = store.auto;
+    $("#model").textContent = (a && a.modelo) || "VW Voyage";
+    if (document.activeElement !== kmInput) kmInput.value = a && a.kmActual != null ? fmt(a.kmActual) : "";
+    const parts = [];
+    if (a && a.actualizado) parts.push(`Actualizado el ${fmtDate(a.actualizado)}`);
+    else if (a) parts.push("Todavía no lo actualizaste");
+    if (a && a.kmPorMes) parts.push(`hacés ~${fmt(a.kmPorMes)} km por mes`);
+    $("#odo-meta").textContent = a ? parts.join(" · ") : "Escribí el kilometraje del tablero y tocá Guardar.";
+  }
+
+  /* ---------- Mantenimiento ---------- */
+  const openChange = new Set();
+  function computePart(r, km, kmPorMes) {
+    const proximo = r.proximoKm != null ? r.proximoKm : (r.ultimoKm || 0) + (r.cadaKm || 0);
+    if (km == null) return { proximo, rest: null, status: "neutral", progress: 0 };
+    const rest = proximo - km;
+    const status = rest <= 0 ? "bad" : rest <= PRONTO_KM ? "warn" : "ok";
+    const span = Math.max(1, proximo - (r.ultimoKm || 0));
+    const progress = Math.min(1, Math.max(0, (km - (r.ultimoKm || 0)) / span));
+    return { proximo, rest, status, progress, kmPorMes };
+  }
+  function restText(c) {
+    if (c.rest == null) return "Cargá el kilometraje para ver cuánto falta";
+    if (c.rest <= 0) return c.rest === 0 ? "Toca cambiarlo ahora" : `Vencido hace ${fmt(-c.rest)} km`;
+    let t = `Faltan ${fmt(c.rest)} km`;
+    if (c.kmPorMes) {
+      const m = c.rest / c.kmPorMes;
+      t += m < 1 ? " · este mes" : ` · ~${Math.round(m)} ${Math.round(m) === 1 ? "mes" : "meses"}`;
+    }
+    return t;
+  }
+  const PILL = { bad: "Vencido", warn: "Pronto", ok: "Al día", neutral: "Sin km" };
+  function renderRepuestos() {
+    const box = $("#list-repuestos");
+    const km = store.auto ? store.auto.kmActual : null;
+    const kmPorMes = store.auto ? store.auto.kmPorMes : null;
+    const rows = store.repuestos.map((r) => ({ r, c: computePart(r, km, kmPorMes) }))
+      .sort((a, b) => (a.c.rest ?? a.c.proximo) - (b.c.rest ?? b.c.proximo));
+    const count = { bad: 0, warn: 0, ok: 0 };
+    rows.forEach(({ c }) => { if (count[c.status] != null) count[c.status]++; });
+    $("#summary").innerHTML = km == null || !rows.length ? "" : `
+      <div class="sum bad"><b>${count.bad}</b><span>Vencidos</span></div>
+      <div class="sum warn"><b>${count.warn}</b><span>En menos de ${fmt(PRONTO_KM)} km</span></div>
+      <div class="sum ok"><b>${count.ok}</b><span>Al día</span></div>`;
+    if (!rows.length) { box.innerHTML = `<div class="empty">Todavía no hay repuestos. Tocá “+ Agregar repuesto” para cargar el primero.</div>`; return; }
+    box.innerHTML = rows.map(({ r, c }) => `
+      <article class="card part ${c.status}">
+        <div class="card-row">
+          <h3>${esc(r.nombre)}</h3>
+          <span class="pill ${c.status}">${PILL[c.status]}</span>
+        </div>
+        <div class="status-line ${c.status}">${esc(restText(c))}</div>
+        <div class="bar ${c.status}" aria-hidden="true"><i style="width:${Math.round(c.progress * 100)}%"></i></div>
+        <div class="kms">
+          <span>Toca a los <b>${fmt(c.proximo)} km</b></span>
+          <span>Último: ${fmt(r.ultimoKm || 0)} km</span>
+          <span>Cada ${fmt(r.cadaKm || 0)} km</span>
+        </div>
+        ${openChange.has(r.id) ? `
+          <form class="inline-form" data-change="${esc(r.id)}">
+            <label for="chg-${esc(r.id)}" class="small">¿A qué km lo cambiaste?</label>
+            <input id="chg-${esc(r.id)}" type="text" inputmode="numeric" value="${km != null ? fmt(km) : ""}">
+            <button class="btn btn-primary btn-sm" type="submit">Guardar</button>
+            <button class="btn btn-sm" type="button" data-cancel-change="${esc(r.id)}">Cancelar</button>
+          </form>` : `
+          <div class="actions">
+            <button class="btn btn-sm btn-primary" type="button" data-open-change="${esc(r.id)}">Lo cambié</button>
+            <button class="btn btn-sm" type="button" data-edit="repuestos" data-id="${esc(r.id)}">Editar</button>
+          </div>`}
+      </article>`).join("");
+  }
+  $("#list-repuestos").addEventListener("click", (e) => {
+    const o = e.target.closest("[data-open-change]");
+    if (o) { openChange.add(o.dataset.openChange); renderRepuestos(); const i = document.getElementById("chg-" + o.dataset.openChange); if (i) i.focus(); return; }
+    const c = e.target.closest("[data-cancel-change]");
+    if (c) { openChange.delete(c.dataset.cancelChange); renderRepuestos(); }
+  });
+  $("#list-repuestos").addEventListener("input", (e) => {
+    if (e.target.matches(".inline-form input")) { const n = parseKm(e.target.value); e.target.value = n == null ? "" : fmt(n); }
+  });
+  $("#list-repuestos").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = e.target.closest("[data-change]"); if (!f) return;
+    const id = f.dataset.change;
+    const r = store.repuestos.find((x) => x.id === id); if (!r) return;
+    const n = parseKm(f.querySelector("input").value);
+    if (n == null) { toast("Escribí el kilometraje del cambio."); return; }
+    openChange.delete(id);
+    save(() => { r.ultimoKm = n; r.proximoKm = n + (r.cadaKm || 0); },
+      `${r.nombre}: próximo cambio a los ${fmt(n + (r.cadaKm || 0))} km`);
+  });
+
+  /* ---------- Contactos ---------- */
+  function waLink(tel) {
+    const d = String(tel || "").replace(/\D/g, "");
+    if (d.length === 10) return "https://wa.me/549" + d;
+    if (d.startsWith("549")) return "https://wa.me/" + d;
+    return null;
+  }
+  function mapsLink(dir) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(dir + ", Buenos Aires, Argentina"); }
+  function contactCard(c) {
+    const wa = waLink(c.telefono);
+    const tel = String(c.telefono || "").replace(/[^\d+]/g, "");
+    return `
+      <article class="card ${c.evitar ? "avoid" : ""}">
+        <div class="card-row">
+          <h3>${esc(c.nombre)}</h3>
+          <span class="pill ${c.evitar ? "bad" : "neutral"}">${c.evitar ? "Evitar" : esc(c.rubro || "Otro")}</span>
+        </div>
+        ${c.nota ? `<div class="small ${c.evitar ? "" : "muted"}">${esc(c.nota)}</div>` : ""}
+        <div class="contact-lines">
+          ${c.telefono ? `<div class="cline"><span class="val">${esc(c.telefono)}</span>
+            ${tel ? `<a href="tel:${esc(tel)}">Llamar</a>` : ""}
+            ${wa ? `<a href="${wa}" target="_blank" rel="noopener">WhatsApp</a>` : ""}
+            <button class="linkbtn" type="button" data-copy="${esc(c.telefono)}">Copiar</button></div>` : ""}
+          ${c.direccion ? `<div class="cline"><span class="val">${esc(c.direccion)}</span>
+            <a href="${mapsLink(c.direccion)}" target="_blank" rel="noopener">Ver en Maps</a></div>` : ""}
+        </div>
+        <div class="actions"><button class="btn btn-sm" type="button" data-edit="contactos" data-id="${esc(c.id)}">Editar</button></div>
+      </article>`;
+  }
+  function renderContactos() {
+    const box = $("#list-contactos");
+    if (!store.contactos.length) { box.innerHTML = `<div class="empty">Todavía no hay contactos. Tocá “+ Agregar contacto”.</div>`; return; }
+    const good = store.contactos.filter((c) => !c.evitar);
+    const bad = store.contactos.filter((c) => c.evitar);
+    const order = [...new Set([...RUBROS, ...good.map((c) => c.rubro || "Otro")])];
+    const groups = order.map((r) => [r, good.filter((c) => (c.rubro || "Otro") === r)]).filter(([, l]) => l.length);
+    box.innerHTML = groups.map(([r, l]) => `
+      <h3 class="group-title">${esc(r)}</h3>
+      <div class="list">${l.sort((a, b) => a.nombre.localeCompare(b.nombre)).map(contactCard).join("")}</div>`).join("")
+      + (bad.length ? `<h3 class="group-title">No volver</h3><div class="list">${bad.map(contactCard).join("")}</div>` : "");
+  }
+  $("#list-contactos").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-copy]"); if (!b) return;
+    try { await navigator.clipboard.writeText(b.dataset.copy); toast("Número copiado"); }
+    catch (_) {
+      const v = b.parentElement.querySelector(".val"); const sel = getSelection(); const rg = document.createRange();
+      rg.selectNodeContents(v); sel.removeAllRanges(); sel.addRange(rg); toast("Número seleccionado: copialo");
+    }
+  });
+
+  /* ---------- Marcas ---------- */
+  function renderMarcas() {
+    const box = $("#list-marcas");
+    if (!store.marcas.length) { box.innerHTML = `<div class="empty">Todavía no hay marcas. Tocá “+ Agregar”.</div>`; return; }
+    const order = [...new Set([...GRUPOS, ...store.marcas.map((m) => m.grupo || "Otros")])];
+    box.innerHTML = order.map((g) => {
+      const l = store.marcas.filter((m) => (m.grupo || "Otros") === g).sort((a, b) => a.pieza.localeCompare(b.pieza));
+      if (!l.length) return "";
+      return `<h3 class="group-title">${esc(g)}</h3>
+        <div class="brand-box">${l.map((m) => `
+          <div class="brand-row">
+            <span class="pz">${esc(m.pieza)}</span>
+            <button class="linkbtn" type="button" data-edit="marcas" data-id="${esc(m.id)}">Editar</button>
+            <span class="mk">${esc(m.marcas)}${m.nota ? ` <span class="muted small">· ${esc(m.nota)}</span>` : ""}</span>
+          </div>`).join("")}</div>`;
+    }).join("");
+  }
+
+  /* ---------- Notas ---------- */
+  function renderNotas() {
+    const box = $("#list-notas");
+    if (!store.notas.length) { box.innerHTML = `<div class="empty">Todavía no hay notas. Tocá “+ Agregar nota”.</div>`; return; }
+    const order = [...new Set([...CATEGORIAS, ...store.notas.map((n) => n.categoria || "Otros")])];
+    box.innerHTML = order.map((cat) => {
+      const l = store.notas.filter((n) => (n.categoria || "Otros") === cat).sort((a, b) => a.titulo.localeCompare(b.titulo));
+      if (!l.length) return "";
+      return `<h3 class="group-title">${esc(cat)}</h3><div class="list">${l.map((n) => `
+        <article class="card">
+          <div class="card-row">
+            <h3>${esc(n.titulo)}</h3>
+            <button class="linkbtn" type="button" data-edit="notas" data-id="${esc(n.id)}">Editar</button>
+          </div>
+          ${n.texto ? `<div class="small muted" style="white-space:pre-line">${esc(n.texto)}</div>` : ""}
+          ${n.url && /^https?:\/\//i.test(n.url) ? `<a class="small" href="${esc(n.url)}" target="_blank" rel="noopener">Abrir link ↗ <span class="muted">(necesita internet)</span></a>` : ""}
+        </article>`).join("")}</div>`;
+    }).join("");
+  }
+
+  /* ---------- Avisos ---------- */
+  function lastBackup() { try { return localStorage.getItem(BACKUP_KEY); } catch (_) { return null; } }
+  function hasData() { return !!store.auto || COLS.some((c) => store[c].length); }
+  function renderBanners() {
+    $("#welcome").hidden = hasData();
+    const lb = lastBackup();
+    const days = lb ? Math.floor((Date.now() - new Date(lb + "T12:00:00").getTime()) / 86400000) : null;
+    const show = hasData() && (days == null || days >= BACKUP_DIAS);
+    $("#backup-reminder").hidden = !show;
+    if (show) $("#backup-reminder-text").textContent = days == null
+      ? "Todavía no hiciste ninguna copia de seguridad. Si se borra la app o cambiás de celu, se pierden los datos."
+      : `Tu última copia de seguridad es de hace ${days} días.`;
+  }
+  function renderAll() { renderAuto(); renderRepuestos(); renderContactos(); renderMarcas(); renderNotas(); renderBanners(); }
+
+  /* ---------- Hoja: agregar / editar / borrar ---------- */
+  function closeSheet() { $("#sheet-root").innerHTML = ""; }
+  function mountSheet(html) {
+    $("#sheet-root").innerHTML = `<div class="sheet-back">${html}</div>`;
+    const back = $(".sheet-back");
+    back.addEventListener("click", (e) => { if (e.target === back || e.target.closest("[data-cancel]")) closeSheet(); });
+    back.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+    return back.firstElementChild;
+  }
+  function openSheet(col, id) {
+    const sc = SCHEMAS[col];
+    const item = id ? store[col].find((x) => x.id === id) : null;
+    const v = item || {};
+    const fieldHtml = sc.fields.map((f) => {
+      const fid = `f-${col}-${f.k}`;
+      const val = v[f.k];
+      if (f.t === "check") return `<label class="check"><input id="${fid}" type="checkbox" ${val ? "checked" : ""}> ${esc(f.l)}</label>`;
+      let input;
+      if (f.t === "select") input = `<select id="${fid}">${f.opts.map((o) => `<option ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+      else if (f.t === "area") input = `<textarea id="${fid}">${esc(val)}</textarea>`;
+      else if (f.t === "num") input = `<input id="${fid}" type="text" inputmode="numeric" data-num value="${val != null ? fmt(val) : ""}">`;
+      else input = `<input id="${fid}" type="${f.t === "url" ? "url" : "text"}" value="${esc(val)}" ${f.req ? "required" : ""}>`;
+      return `<div class="field"><label for="${fid}">${esc(f.l)}</label>${input}${f.hint ? `<span class="hint">${esc(f.hint)}</span>` : ""}</div>`;
+    }).join("");
+    const form = mountSheet(`
+      <form class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" novalidate>
+        <h2 id="sheet-title">${item ? "Editar" : "Agregar"} ${esc(sc.title)}</h2>
+        ${fieldHtml}
+        <div class="sheet-actions">
+          ${item ? `<button class="btn btn-danger" type="button" data-delete>Borrar</button>` : "<span></span>"}
+          <div>
+            <button class="btn" type="button" data-cancel>Cancelar</button>
+            <button class="btn btn-primary" type="submit">Guardar</button>
+          </div>
+        </div>
+      </form>`);
+    form.querySelector("input, select, textarea").focus();
+    form.addEventListener("input", (e) => { if (e.target.hasAttribute("data-num")) { const n = parseKm(e.target.value); e.target.value = n == null ? "" : fmt(n); } });
+    const del = form.querySelector("[data-delete]");
+    if (del) del.addEventListener("click", () => {
+      if (!del.classList.contains("armed")) { del.classList.add("armed"); del.textContent = "¿Seguro? Tocá para borrar"; return; }
+      if (save(() => { store[col] = store[col].filter((x) => x.id !== id); }, "Borrado")) closeSheet();
+    });
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const data = {};
+      for (const f of sc.fields) {
+        const el = document.getElementById(`f-${col}-${f.k}`);
+        if (f.t === "check") data[f.k] = el.checked;
+        else if (f.t === "num") { const n = parseKm(el.value); if (n != null) data[f.k] = n; }
+        else { const s = el.value.trim(); if (s) data[f.k] = s; }
+        if (f.req && data[f.k] == null) { toast(`Falta completar: ${f.l}`); el.focus(); return; }
+      }
+      if (col === "repuestos" && data.proximoKm == null) data.proximoKm = data.ultimoKm + data.cadaKm;
+      const ok = save(() => {
+        if (id) store[col] = store[col].map((x) => (x.id === id ? { id, ...data } : x));
+        else store[col].push({ id: newId(), ...data });
+      });
+      if (ok) closeSheet();
+    });
+  }
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("[data-add]"); if (a) { openSheet(a.dataset.add); return; }
+    const ed = e.target.closest("[data-edit]"); if (ed) { openSheet(ed.dataset.edit, ed.dataset.id); return; }
+    if (e.target.closest("[data-open-data]")) openDataSheet();
+  });
+
+  /* ---------- Hoja: datos y copias de seguridad ---------- */
+  function exportText() { return JSON.stringify({ app: "libreta-voyage", version: 1, exportado: today(), ...store }, null, 1); }
+  function markBackup() { try { localStorage.setItem(BACKUP_KEY, today()); } catch (_) {} renderBanners(); }
+  function openDataSheet() {
+    const lb = lastBackup();
+    const sheet = mountSheet(`
+      <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="data-title">
+        <h2 id="data-title">Datos y copias</h2>
+        <p class="small muted">Tus datos se guardan solo en este celu. Hacé una copia de vez en cuando y guardala en Drive o mandatela por WhatsApp, por si se borra la app o cambiás de teléfono.</p>
+        <div class="sheet-section">
+          <h3>Hacer copia de seguridad</h3>
+          <p class="small muted">${lb ? `Última copia: ${fmtDate(lb)}` : "Todavía no hiciste ninguna copia."}</p>
+          <div class="actions">
+            <button class="btn btn-primary" type="button" id="dl-backup">Descargar archivo</button>
+            <button class="btn" type="button" id="copy-backup">Copiar como texto</button>
+          </div>
+        </div>
+        <div class="sheet-section">
+          <h3>Cargar datos</h3>
+          <p class="small muted">Pegá el texto que copiaste desde la libreta de claude.ai o desde una copia, o elegí un archivo de copia. <b>Reemplaza todo lo que hay ahora.</b></p>
+          <div class="field">
+            <label for="import-text">Texto de la copia</label>
+            <textarea id="import-text" placeholder='{"app":"libreta-voyage", ...}'></textarea>
+          </div>
+          <div class="actions">
+            <label class="btn" for="import-file" style="display:inline-block">Elegir archivo</label>
+            <input id="import-file" type="file" accept=".json,application/json,text/plain" hidden>
+            <button class="btn btn-danger" type="button" id="do-import">Cargar y reemplazar</button>
+          </div>
+        </div>
+        <div class="sheet-actions"><span></span><div><button class="btn" type="button" data-cancel>Cerrar</button></div></div>
+      </div>`);
+    sheet.querySelector("#dl-backup").addEventListener("click", () => {
+      const blob = new Blob([exportText()], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `libreta-voyage-${today()}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      markBackup(); toast("Copia descargada");
+    });
+    sheet.querySelector("#copy-backup").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(exportText()); markBackup(); toast("Copia copiada: pegala en WhatsApp o en una nota"); }
+      catch (_) { const t = sheet.querySelector("#import-text"); t.value = exportText(); t.select(); toast("Texto seleccionado: copialo"); }
+    });
+    sheet.querySelector("#import-file").addEventListener("change", async (e) => {
+      const f = e.target.files && e.target.files[0]; if (!f) return;
+      sheet.querySelector("#import-text").value = await f.text();
+      toast("Archivo leído. Tocá “Cargar y reemplazar”.");
+    });
+    const btn = sheet.querySelector("#do-import");
+    btn.addEventListener("click", () => {
+      const raw = sheet.querySelector("#import-text").value.trim();
+      if (!raw) { toast("Pegá el texto o elegí un archivo primero."); return; }
+      let data;
+      try { data = normalize(JSON.parse(raw)); }
+      catch (_) { toast("Ese texto no es una copia de la libreta. Copialo de nuevo, completo."); return; }
+      if (hasData() && !btn.classList.contains("armed")) { btn.classList.add("armed"); btn.textContent = "¿Seguro? Se reemplaza todo"; return; }
+      if (save(() => { store = data; }, `Datos cargados: ${data.repuestos.length} repuestos, ${data.contactos.length} contactos`)) closeSheet();
+    });
+  }
+  $("#open-data").addEventListener("click", openDataSheet);
+
+  renderAll();
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  }
+})();
+</script>
+</body>
+</html>
