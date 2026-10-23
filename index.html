@@ -312,6 +312,7 @@ main .wrap { padding-block: 18px 64px; }
       { k: "marcas", l: "Marcas", t: "text", req: true },
       { k: "grupo", l: "Grupo", t: "select", opts: GRUPOS },
       { k: "nota", l: "Nota", t: "text" },
+      { k: "orden", l: "Lugar en la lista", t: "num", hint: "1 va arriba de todo en su grupo. Si lo dejás vacío, va al final, por nombre." },
     ]},
     notas: { title: "nota", fields: [
       { k: "categoria", l: "Categoría", t: "select", opts: CATEGORIAS },
@@ -330,7 +331,7 @@ main .wrap { padding-block: 18px 64px; }
   const fmtDate = (iso) => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
 
   /* ---------- Datos guardados en el celu ---------- */
-  function emptyStore() { return { auto: null, repuestos: [], contactos: [], marcas: [], notas: [] }; }
+  function emptyStore() { return { auto: null, repuestos: [], contactos: [], marcas: [], notas: [], arreglos: 1 }; }
   function loadStore() {
     try {
       const raw = localStorage.getItem(STORE_KEY);
@@ -346,10 +347,20 @@ main .wrap { padding-block: 18px 64px; }
       if (d[c] != null && !Array.isArray(d[c])) throw new Error("formato");
       out[c] = (d[c] || []).filter((x) => x && typeof x === "object").map((x) => ({ ...x, id: String(x.id || newId()) }));
     }
+    if (!(Number(d.arreglos) >= 1)) {
+      /* Pedido de Agus (oct/2026): sacar "Bujes reforzados (De Bora)", que ya está cubierto por los bujes de parrilla VTH,
+         y ordenar el tren delantero: primero lo Nakata y lo que se rompe más seguido, al final lo que dura más. */
+      out.marcas = out.marcas.filter((m) => !(m.id === "bujes-bora" || (/bujes reforzados/i.test(m.pieza || "") && /bora/i.test(m.marcas || ""))));
+      const orden = { rotulas: 1, extremos: 2, precaps: 3, bieletas: 4, "bujes-barra": 5, "bujes-parrilla": 6, rulemanes: 7 };
+      out.marcas.forEach((m) => { if (orden[m.id] && m.orden == null) m.orden = orden[m.id]; });
+      out.arreglado = true;
+    }
+    out.arreglos = 1;
     return out;
   }
   let store = loadStore();
-  function persist() { localStorage.setItem(STORE_KEY, JSON.stringify(store)); }
+  function persist() { const { arreglado, ...rest } = store; localStorage.setItem(STORE_KEY, JSON.stringify(rest)); }
+  if (store.arreglado) { delete store.arreglado; try { persist(); } catch (_) {} }
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
 
   let toastTimer;
@@ -542,7 +553,7 @@ main .wrap { padding-block: 18px 64px; }
     if (!store.marcas.length) { box.innerHTML = `<div class="empty">Todavía no hay marcas. Tocá “+ Agregar”.</div>`; return; }
     const order = [...new Set([...GRUPOS, ...store.marcas.map((m) => m.grupo || "Otros")])];
     box.innerHTML = order.map((g) => {
-      const l = store.marcas.filter((m) => (m.grupo || "Otros") === g).sort((a, b) => a.pieza.localeCompare(b.pieza));
+      const l = store.marcas.filter((m) => (m.grupo || "Otros") === g).sort((a, b) => (a.orden ?? 999) - (b.orden ?? 999) || a.pieza.localeCompare(b.pieza));
       if (!l.length) return "";
       return `<h3 class="group-title">${esc(g)}</h3>
         <div class="brand-box">${l.map((m) => `

@@ -1,6 +1,6 @@
 // Guarda la app en el celu para que abra sin internet.
 // Al cambiar algo de la app, subir VERSION para que los celulares bajen la nueva.
-const VERSION = "v2";
+const VERSION = "v3";
 const APP_CACHE = "libreta-app-" + VERSION;
 const FONT_CACHE = "libreta-fonts";
 const APP_FILES = [
