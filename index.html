@@ -282,6 +282,7 @@ main .wrap { padding-block: 18px 64px; }
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
+const APP_VERSION = "v4"; // igual que VERSION en sw.js: se muestra en "Datos y copias"
 (() => {
   const STORE_KEY = "libreta-voyage-v1";
   const BACKUP_KEY = "libreta-voyage-ultima-copia";
@@ -687,6 +688,7 @@ main .wrap { padding-block: 18px 64px; }
     const sheet = mountSheet(`
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="data-title">
         <h2 id="data-title">Datos y copias</h2>
+        <p class="small muted">Versión de la app: ${APP_VERSION}</p>
         <p class="small muted">Tus datos se guardan solo en este celu. Hacé una copia de vez en cuando y guardala en Drive o mandatela por WhatsApp, por si se borra la app o cambiás de teléfono.</p>
         <div class="sheet-section">
           <h3>Hacer copia de seguridad</h3>
@@ -747,7 +749,11 @@ main .wrap { padding-block: 18px 64px; }
   renderAll();
 
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+    // Cuando baja una versión nueva, la app se recarga sola una vez para mostrarla (antes había que abrirla dos veces).
+    const habiaVersion = !!navigator.serviceWorker.controller;
+    let recargada = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (habiaVersion && !recargada) { recargada = true; location.reload(); } });
+    window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").then((r) => r.update()).catch(() => {}); });
   }
 })();
 </script>
