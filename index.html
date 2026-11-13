@@ -168,6 +168,15 @@ main .wrap { padding-block: 18px 64px; }
 .brand-row .mk { grid-column: 1 / -1; font-size: 15px; }
 .brand-box { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 14px; }
 
+/* Multas: links a los sitios oficiales */
+.multa { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; color: var(--ink); text-decoration: none; }
+.multa:hover { border-color: var(--accent); }
+.multa-ico { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--sunken); color: var(--accent); }
+.multa-txt { display: grid; gap: 2px; min-width: 0; }
+.multa-txt b { font-size: 17px; font-weight: 600; line-height: 1.25; }
+.multa-txt span { font-size: 14px; color: var(--muted); }
+.multa-ir { margin-left: auto; color: var(--accent); font-size: 26px; font-weight: 700; line-height: 1; }
+
 /* Hoja de edición */
 .sheet-back { position: fixed; inset: 0; background: rgba(10, 15, 20, .45); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
 .sheet {
@@ -228,6 +237,7 @@ main .wrap { padding-block: 18px 64px; }
   <div class="wrap" role="tablist">
     <button class="tab" role="tab" data-tab="mantenimiento" aria-selected="true">Mantenimiento</button>
     <button class="tab" role="tab" data-tab="marcas" aria-selected="false">Marcas buenas</button>
+    <button class="tab" role="tab" data-tab="multas" aria-selected="false">Multas</button>
     <button class="tab" role="tab" data-tab="contactos" aria-selected="false">Contactos</button>
     <button class="tab" role="tab" data-tab="notas" aria-selected="false">Fallas, links y tips</button>
   </div>
@@ -260,6 +270,58 @@ main .wrap { padding-block: 18px 64px; }
       <div id="list-marcas" class="panel"></div>
     </section>
 
+    <section class="panel" id="p-multas" role="tabpanel" hidden>
+      <div class="panel-head"><h2>Consultar multas</h2></div>
+      <div class="list">
+        <a class="multa" href="https://consultainfracciones.seguridadvial.gob.ar/" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Nacional (SINAI)</b><span>Rutas nacionales y las jurisdicciones adheridas al sistema nacional. Agencia Nacional de Seguridad Vial.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://infraccionesba.gba.gob.ar/consulta-infraccion" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Provincia de Buenos Aires</b><span>InfraccionesBA: multas de rutas provinciales y de los municipios adheridos.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://tramitesweb.lanus.gob.ar/lanusdigital#infracciones" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Lanús</b><span>Lanús Digital: infracciones del municipio.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://multas.mda.gob.ar/" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Avellaneda</b><span>Multas del municipio de Avellaneda.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://webextra.lomasdezamora.gov.ar/infracciones/ConsultaFaltasNuevoMP.aspx" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Lomas de Zamora</b><span>Consulta de faltas del municipio.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://buenosaires.gob.ar/tramites/consulta-de-infracciones" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Ciudad de Buenos Aires</b><span>Consulta de infracciones del Gobierno de la Ciudad.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://www.rentascordoba.gob.ar/mirentas/rentas.html?page=consultaCaminera" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Córdoba (Policía Caminera)</b><span>Multas de la Policía Caminera de la Provincia de Córdoba, en Rentas Córdoba.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://www.santafe.gob.ar/juzgadovirtual/consultaInfraccion.do?method=inicio" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Santa Fe</b><span>Juzgado virtual de la Provincia de Santa Fe.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+        <a class="multa" href="https://contravenciones.mardelplata.gob.ar/" target="_blank" rel="noopener">
+          <span class="multa-ico"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></span>
+          <span class="multa-txt"><b>Mar del Plata (General Pueyrredon)</b><span>Infracciones del municipio.</span></span>
+          <span class="multa-ir" aria-hidden="true">›</span>
+        </a>
+      </div>
+      <p class="small muted">La app no consulta ni guarda nada: se abre el sitio oficial y la consulta la hacés vos ahí (necesita internet). Tené a mano la patente o tu DNI. Cada jurisdicción tiene la suya: si te hicieron una multa en otro lado, buscala en el sitio de ese municipio.</p>
+    </section>
+
     <section class="panel" id="p-contactos" role="tabpanel" hidden>
       <div class="panel-head">
         <h2>Contactos</h2>
@@ -282,7 +344,7 @@ main .wrap { padding-block: 18px 64px; }
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
-const APP_VERSION = "v4"; // igual que VERSION en sw.js: se muestra en "Datos y copias"
+const APP_VERSION = "v5"; // igual que VERSION en sw.js: se muestra en "Datos y copias"
 (() => {
   const STORE_KEY = "libreta-voyage-v1";
   const BACKUP_KEY = "libreta-voyage-ultima-copia";
@@ -380,7 +442,7 @@ const APP_VERSION = "v4"; // igual que VERSION en sw.js: se muestra en "Datos y 
   }
 
   /* ---------- Pestañas ---------- */
-  const TABS = ["mantenimiento", "marcas", "contactos", "notas"];
+  const TABS = ["mantenimiento", "marcas", "multas", "contactos", "notas"];
   function showTab(name) {
     if (!TABS.includes(name)) name = "mantenimiento";
     document.querySelectorAll(".tab").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));

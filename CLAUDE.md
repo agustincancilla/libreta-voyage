@@ -2,7 +2,8 @@
 
 App para el auto de Agus (VW Voyage): https://agustincancilla.github.io/libreta-voyage/
 
-- Pestañas, en este orden (lo pidió Agus): Mantenimiento, Marcas buenas, Contactos, Fallas/links/tips.
+- Pestañas, en este orden (lo pidió Agus): Mantenimiento, Marcas buenas, Multas, Contactos, Fallas/links/tips.
+- Multas: botones fijos (en el HTML, sin datos) que abren el sitio oficial de consulta de infracciones: Nacional (SINAI), Provincia de Buenos Aires, Lanús, Avellaneda, Lomas de Zamora, CABA, Córdoba, Santa Fe y Mar del Plata. Copiado del estilo de la app "Rinde" que mostró Agus.
 - Mantenimiento: cuentakilómetros arriba; cada repuesto tiene `cadaKm`, `ultimoKm`, `proximoKm`. Vencido / "pronto" (menos de 5.000 km) / al día; estima meses con `kmPorMes` (4.000). "Lo cambié" pide el km y recalcula el próximo.
 - Marcas buenas: dentro de cada grupo se ordenan por `orden` (campo "Lugar en la lista"; 1 arriba) y después por nombre. Tren delantero (pedido de Agus): primero lo Nakata y lo que se rompe más seguido (rótulas, extremos, precaps, bieletas), después bujes VTH (barra, parrilla) y al final rulemanes. Se sacó "Bujes reforzados (De Bora)" (ya cubierto por los bujes de parrilla VTH); `arreglos` marca que ese cambio ya se aplicó.
 - Contactos con copiar, llamar, WhatsApp (`wa.me/549…`) y Maps; los que hay que evitar van aparte en "No volver".
