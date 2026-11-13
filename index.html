@@ -206,6 +206,15 @@ main .wrap { padding-block: 18px 64px; }
 }
 .banner { background: var(--warn-bg); color: var(--warn); border-radius: 10px; padding: 12px 14px; font-weight: 500; display: grid; gap: 8px; justify-items: start; }
 .banner.info { background: var(--sunken); color: var(--ink); border: 1px solid var(--line); }
+.alertas { border-left: 4px solid var(--warn); }
+.alertas ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.alertas li { display: flex; gap: 8px; align-items: baseline; font-size: 15px; }
+.alertas li::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); transform: translateY(-1px); }
+.alertas li.bad::before { background: var(--bad); }
+.alertas li b { font-weight: 600; }
+a.btn { text-decoration: none; color: var(--ink); display: inline-block; }
+.notif { display: grid; gap: 8px; justify-items: start; background: var(--sunken); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.inline-form input[type="date"] { width: 170px; }
 @media (max-width: 420px) { .summary { gap: 6px; } .sum b { font-size: 24px; } .brand h1 { font-size: 26px; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -254,6 +263,13 @@ main .wrap { padding-block: 18px 64px; }
         <span id="backup-reminder-text"></span>
         <button class="btn btn-sm" type="button" data-share-backup>Hacer copia</button>
       </div>
+      <div id="alertas"></div>
+      <div class="panel-head">
+        <h2>Vencimientos</h2>
+        <button class="btn" type="button" data-add="vencimientos">+ Agregar</button>
+      </div>
+      <div class="list" id="list-vencimientos"></div>
+      <div class="notif small" id="notif"></div>
       <div class="panel-head">
         <h2>Mantenimiento</h2>
         <button class="btn" type="button" data-add="repuestos">+ Agregar repuesto</button>
@@ -344,13 +360,18 @@ main .wrap { padding-block: 18px 64px; }
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
 <script>
-const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y copias"
+const APP_VERSION = "v7"; // igual que VERSION en sw.js: se muestra en "Datos y copias"
 (() => {
   const STORE_KEY = "libreta-voyage-v1";
   const BACKUP_KEY = "libreta-voyage-ultima-copia";
-  const PRONTO_KM = 5000;
   const BACKUP_DIAS = 30;
-  const COLS = ["repuestos", "contactos", "marcas", "notas"];
+  const AVISO_DIAS = 30;          // vencimientos (VTV, oblea…): avisa un mes antes
+  const AVISOS_CACHE = "libreta-avisos"; // datos para que el service worker avise con la app cerrada
+  const COLS = ["vencimientos", "repuestos", "contactos", "marcas", "notas"];
+  /* Repuestos caros: avisa 1 mes antes (kmPorMes); baratos (aceite, filtros…): 15 días antes (kmPorMes / 2). Pedido de Agus, nov/2026. */
+  const CARO_RX = /amortig|correa|distribuci|embrague|cubierta|bobina|bater/i;
+  const avisoDe = (r) => r.aviso === "caro" || r.aviso === "barato" ? r.aviso : (CARO_RX.test(r.nombre || "") ? "caro" : "barato");
+  const AVISO_OPTS = [{ v: "barato", l: "15 días antes (repuesto barato)" }, { v: "caro", l: "1 mes antes (repuesto caro)" }];
   const RUBROS = ["Mecánico", "Chapa y pintura", "Instrumental", "Llantas", "Seguro", "Alquiler", "Otro"];
   const GRUPOS = ["Motor", "Tren delantero", "Suspensión y ruedas", "Frenos", "Otros"];
   const CATEGORIAS = ["Fallas (check engine)", "Datos del auto", "Links útiles", "Limpieza y cuidado", "Laburo"];
@@ -361,6 +382,13 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
       { k: "cadaKm", l: "Se cambia cada (km)", t: "num", req: true },
       { k: "ultimoKm", l: "Último cambio (km)", t: "num", req: true },
       { k: "proximoKm", l: "Próximo cambio (km)", t: "num", hint: "Si lo dejás vacío, se calcula: último cambio + cada cuánto." },
+      { k: "aviso", l: "Avisarme", t: "select", opts: AVISO_OPTS, def: avisoDe, hint: "Con ~4.000 km por mes: 1 mes antes son ~4.000 km y 15 días, ~2.000 km." },
+    ]},
+    vencimientos: { title: "vencimiento", fields: [
+      { k: "nombre", l: "Qué vence", t: "text", req: true },
+      { k: "fecha", l: "Vence el", t: "date", hint: "Si todavía no la sabés, dejala vacía. Te avisa un mes antes." },
+      { k: "cadaMeses", l: "Se renueva cada (meses)", t: "num", hint: "Para proponerte la fecha nueva cuando toques “La hice”. Ej: VTV 12, licencia 60." },
+      { k: "nota", l: "Nota", t: "text" },
     ]},
     contactos: { title: "contacto", fields: [
       { k: "nombre", l: "Nombre", t: "text", req: true },
@@ -392,9 +420,26 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
   const newId = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2));
   const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
   const fmtDate = (iso) => { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; };
+  const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const parseIso = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d, 12); };
+  const addDays = (iso, n) => { const d = parseIso(iso); d.setDate(d.getDate() + n); return isoOf(d); };
+  const addMonths = (iso, n) => {
+    const d = parseIso(iso), dia = d.getDate();
+    d.setDate(1); d.setMonth(d.getMonth() + n);
+    d.setDate(Math.min(dia, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()));
+    return isoOf(d);
+  };
+  const diasHasta = (iso) => Math.round((parseIso(iso) - parseIso(today())) / 86400000);
+  const validIso = (s) => typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
   /* ---------- Datos guardados en el celu ---------- */
-  function emptyStore() { return { auto: null, repuestos: [], contactos: [], marcas: [], notas: [], arreglos: 1 }; }
+  function emptyStore() { return { auto: null, vencimientos: [], repuestos: [], contactos: [], marcas: [], notas: [], arreglos: 2 }; }
+  const VENC_INICIALES = [
+    { id: "vtv", nombre: "VTV", cadaMeses: 12 },
+    { id: "oblea-gnc", nombre: "Oblea de GNC", cadaMeses: 12 },
+    { id: "seguro", nombre: "Seguro del auto (póliza)", cadaMeses: 12 },
+    { id: "licencia", nombre: "Licencia de conducir", cadaMeses: 60 },
+  ];
   function loadStore() {
     try {
       const raw = localStorage.getItem(STORE_KEY);
@@ -410,15 +455,22 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
       if (d[c] != null && !Array.isArray(d[c])) throw new Error("formato");
       out[c] = (d[c] || []).filter((x) => x && typeof x === "object").map((x) => ({ ...x, id: String(x.id || newId()) }));
     }
-    if (!(Number(d.arreglos) >= 1)) {
+    const arreglos = Number(d.arreglos) || 0;
+    if (arreglos < 1) {
       /* Pedido de Agus (oct/2026): sacar "Bujes reforzados (De Bora)", que ya está cubierto por los bujes de parrilla VTH,
          y ordenar el tren delantero: primero lo Nakata y lo que se rompe más seguido, al final lo que dura más. */
       out.marcas = out.marcas.filter((m) => !(m.id === "bujes-bora" || (/bujes reforzados/i.test(m.pieza || "") && /bora/i.test(m.marcas || ""))));
       const orden = { rotulas: 1, extremos: 2, precaps: 3, bieletas: 4, "bujes-barra": 5, "bujes-parrilla": 6, rulemanes: 7 };
       out.marcas.forEach((m) => { if (orden[m.id] && m.orden == null) m.orden = orden[m.id]; });
-      out.arreglado = true;
     }
-    out.arreglos = 1;
+    if (arreglos < 2) {
+      /* Nov/2026: vencimientos (VTV, oblea, seguro, licencia) sin fecha, para que Agus la cargue, y aviso caro/barato en cada repuesto. */
+      if (!out.vencimientos.length) out.vencimientos = VENC_INICIALES.map((v) => ({ ...v }));
+      out.repuestos.forEach((r) => { if (!r.aviso) r.aviso = avisoDe(r); });
+    }
+    if (arreglos < 2) out.arreglado = true;
+    out.vencimientos.forEach((v) => { if (!validIso(v.fecha)) delete v.fecha; });
+    out.arreglos = 2;
     return out;
   }
   let store = loadStore();
@@ -480,11 +532,12 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
 
   /* ---------- Mantenimiento ---------- */
   const openChange = new Set();
+  const umbralKm = (r, kmPorMes) => Math.round((kmPorMes || 4000) * (avisoDe(r) === "caro" ? 1 : 0.5));
   function computePart(r, km, kmPorMes) {
     const proximo = r.proximoKm != null ? r.proximoKm : (r.ultimoKm || 0) + (r.cadaKm || 0);
     if (km == null) return { proximo, rest: null, status: "neutral", progress: 0 };
     const rest = proximo - km;
-    const status = rest <= 0 ? "bad" : rest <= PRONTO_KM ? "warn" : "ok";
+    const status = rest <= 0 ? "bad" : rest <= umbralKm(r, kmPorMes) ? "warn" : "ok";
     const span = Math.max(1, proximo - (r.ultimoKm || 0));
     const progress = Math.min(1, Math.max(0, (km - (r.ultimoKm || 0)) / span));
     return { proximo, rest, status, progress, kmPorMes };
@@ -510,7 +563,7 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
     rows.forEach(({ c }) => { if (count[c.status] != null) count[c.status]++; });
     $("#summary").innerHTML = km == null || !rows.length ? "" : `
       <div class="sum bad"><b>${count.bad}</b><span>Vencidos</span></div>
-      <div class="sum warn"><b>${count.warn}</b><span>En menos de ${fmt(PRONTO_KM)} km</span></div>
+      <div class="sum warn"><b>${count.warn}</b><span>Por cambiar pronto</span></div>
       <div class="sum ok"><b>${count.ok}</b><span>Al día</span></div>`;
     if (!rows.length) { box.innerHTML = `<div class="empty">Todavía no hay repuestos. Tocá “+ Agregar repuesto” para cargar el primero.</div>`; return; }
     box.innerHTML = rows.map(({ r, c }) => `
@@ -525,6 +578,7 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
           <span>Toca a los <b>${fmt(c.proximo)} km</b></span>
           <span>Último: ${fmt(r.ultimoKm || 0)} km</span>
           <span>Cada ${fmt(r.cadaKm || 0)} km</span>
+          <span>Aviso ${avisoDe(r) === "caro" ? "1 mes" : "15 días"} antes</span>
         </div>
         ${openChange.has(r.id) ? `
           <form class="inline-form" data-change="${esc(r.id)}">
@@ -559,6 +613,153 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
     save(() => { r.ultimoKm = n; r.proximoKm = n + (r.cadaKm || 0); },
       `${r.nombre}: próximo cambio a los ${fmt(n + (r.cadaKm || 0))} km`);
   });
+
+
+  /* ---------- Vencimientos (VTV, oblea, seguro, licencia) ---------- */
+  const openRenew = new Set();
+  function vencInfo(v) {
+    if (!validIso(v.fecha)) return { status: "neutral", dias: null, text: "Cargá la fecha de vencimiento para que te avise" };
+    const dias = diasHasta(v.fecha);
+    const status = dias < 0 ? "bad" : dias <= AVISO_DIAS ? "warn" : "ok";
+    const text = dias < 0 ? `Venció el ${fmtDate(v.fecha)} (hace ${-dias} ${dias === -1 ? "día" : "días"})`
+      : dias === 0 ? "Vence hoy"
+      : `Vence el ${fmtDate(v.fecha)} · ${dias === 1 ? "falta 1 día" : dias <= 60 ? `faltan ${dias} días` : `faltan ~${Math.round(dias / 30.4)} meses`}`;
+    return { status, dias, text };
+  }
+  const VPILL = { bad: "Vencida", warn: "Pronto", ok: "Al día", neutral: "Sin fecha" };
+  /* Google Calendar: evento de todo el día, un mes antes del vencimiento (o hoy, si ya falta menos). Avisa aunque la app esté cerrada. */
+  function calLink(v) {
+    let d = addDays(v.fecha, -AVISO_DIAS); if (d < today()) d = today();
+    const q = new URLSearchParams({
+      action: "TEMPLATE",
+      text: `Renovar ${v.nombre} (vence el ${fmtDate(v.fecha)})`,
+      dates: `${d.replace(/-/g, "")}/${addDays(d, 1).replace(/-/g, "")}`,
+      details: `${v.nombre} vence el ${fmtDate(v.fecha)}. Recordatorio de la Libreta del Voyage.`,
+    });
+    return "https://calendar.google.com/calendar/render?" + q.toString();
+  }
+  function renderVencimientos() {
+    const box = $("#list-vencimientos");
+    if (!store.vencimientos.length) { box.innerHTML = `<div class="empty">No hay vencimientos. Tocá “+ Agregar” para cargar la VTV, la oblea del GNC…</div>`; return; }
+    const rows = store.vencimientos.map((v) => ({ v, i: vencInfo(v) }))
+      .sort((a, b) => (a.i.dias ?? 1e9) - (b.i.dias ?? 1e9) || a.v.nombre.localeCompare(b.v.nombre));
+    box.innerHTML = rows.map(({ v, i }) => {
+      const prop = v.cadaMeses ? addMonths(validIso(v.fecha) && v.fecha > today() ? v.fecha : today(), v.cadaMeses) : "";
+      return `
+      <article class="card part ${i.status}">
+        <div class="card-row">
+          <h3>${esc(v.nombre)}</h3>
+          <span class="pill ${i.status}">${VPILL[i.status]}</span>
+        </div>
+        <div class="status-line ${i.status}">${esc(i.text)}</div>
+        ${v.nota ? `<div class="small muted">${esc(v.nota)}</div>` : ""}
+        ${openRenew.has(v.id) ? `
+          <form class="inline-form" data-renew="${esc(v.id)}">
+            <label for="ren-${esc(v.id)}" class="small">¿Hasta cuándo vale la nueva?</label>
+            <input id="ren-${esc(v.id)}" type="date" value="${prop}">
+            <button class="btn btn-primary btn-sm" type="submit">Guardar</button>
+            <button class="btn btn-sm" type="button" data-cancel-renew="${esc(v.id)}">Cancelar</button>
+          </form>` : `
+          <div class="actions">
+            ${i.dias == null
+              ? `<button class="btn btn-sm btn-primary" type="button" data-edit="vencimientos" data-id="${esc(v.id)}">Cargar fecha</button>`
+              : `<button class="btn btn-sm btn-primary" type="button" data-open-renew="${esc(v.id)}">La hice</button>
+                 <button class="btn btn-sm" type="button" data-edit="vencimientos" data-id="${esc(v.id)}">Editar</button>
+                 ${i.dias > 0 ? `<a class="btn btn-sm" href="${esc(calLink(v))}" target="_blank" rel="noopener">Agendar en Calendar</a>` : ""}`}
+          </div>`}
+      </article>`;
+    }).join("");
+  }
+  $("#list-vencimientos").addEventListener("click", (e) => {
+    const o = e.target.closest("[data-open-renew]");
+    if (o) { openRenew.add(o.dataset.openRenew); renderVencimientos(); const i = document.getElementById("ren-" + o.dataset.openRenew); if (i) i.focus(); return; }
+    const c = e.target.closest("[data-cancel-renew]");
+    if (c) { openRenew.delete(c.dataset.cancelRenew); renderVencimientos(); }
+  });
+  $("#list-vencimientos").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const f = e.target.closest("[data-renew]"); if (!f) return;
+    const v = store.vencimientos.find((x) => x.id === f.dataset.renew); if (!v) return;
+    const nueva = f.querySelector("input").value;
+    if (!validIso(nueva)) { toast("Elegí la fecha de vencimiento nueva."); return; }
+    openRenew.delete(v.id);
+    save(() => { v.fecha = nueva; v.hecha = today(); }, `${v.nombre}: vence el ${fmtDate(nueva)}`);
+  });
+
+  /* ---------- Avisos: cartel arriba + notificaciones del celu ---------- */
+  function avisosPendientes() {
+    const l = [];
+    for (const v of store.vencimientos) {
+      const i = vencInfo(v);
+      if (i.status === "bad" || i.status === "warn") l.push({ status: i.status, orden: i.dias, html: `<b>${esc(v.nombre)}</b>: ${esc(i.dias < 0 ? `venció hace ${-i.dias} ${i.dias === -1 ? "día" : "días"}` : i.dias === 0 ? "vence hoy" : `vence en ${i.dias} ${i.dias === 1 ? "día" : "días"} (${fmtDate(v.fecha).slice(0, 5)})`)}` });
+    }
+    const km = store.auto ? store.auto.kmActual : null;
+    const kmPorMes = store.auto ? store.auto.kmPorMes : null;
+    if (km != null) for (const r of store.repuestos) {
+      const c = computePart(r, km, kmPorMes);
+      if (c.status !== "bad" && c.status !== "warn") continue;
+      const dias = kmPorMes ? Math.round(c.rest / kmPorMes * 30.4) : null;
+      l.push({ status: c.status, orden: dias ?? c.rest / 100, html: `<b>${esc(r.nombre)}</b>: ${esc(c.rest <= 0 ? (c.rest === 0 ? "toca cambiarlo ahora" : `vencido hace ${fmt(-c.rest)} km`) : `faltan ${fmt(c.rest)} km${dias != null ? ` (~${dias} ${dias === 1 ? "día" : "días"})` : ""}`)}` });
+    }
+    return l.sort((a, b) => a.orden - b.orden);
+  }
+  function renderAlertas() {
+    const l = avisosPendientes(), MAX = 6;
+    $("#alertas").innerHTML = !l.length ? "" : `
+      <div class="card alertas">
+        <h3>Para tener en cuenta</h3>
+        <ul>${l.slice(0, MAX).map((a) => `<li class="${a.status}"><span>${a.html}</span></li>`).join("")}</ul>
+        ${l.length > MAX ? `<div class="small muted">y ${l.length - MAX} más abajo.</div>` : ""}
+      </div>`;
+  }
+  const notifSoportadas = () => "Notification" in window && "serviceWorker" in navigator;
+  function renderNotif() {
+    const box = $("#notif");
+    if (!notifSoportadas()) { box.innerHTML = `<span>Este navegador no muestra avisos. Para la VTV usá “Agendar en Calendar”.</span>`; return; }
+    const p = Notification.permission;
+    box.innerHTML = p === "granted"
+      ? `<span><b>Avisos del celu activados.</b> Te avisa al abrir la app y, si Chrome lo permite, también con la app cerrada (más o menos una vez por día). Para no perderte la VTV, agendala también en Calendar.</span>`
+      : p === "denied"
+      ? `<span>Los avisos están bloqueados. Para activarlos: mantené apretado el ícono de la app → <b>Información de la app</b> → <b>Notificaciones</b>.</span>`
+      : `<span>¿Querés que el celu te avise cuando se acerque un vencimiento o un cambio? (vencimientos: 1 mes antes; repuestos caros: 1 mes; baratos: 15 días).</span>
+         <button class="btn btn-primary btn-sm" type="button" id="activar-avisos">Activar avisos en el celu</button>`;
+  }
+  $("#notif").addEventListener("click", async (e) => {
+    if (!e.target.closest("#activar-avisos")) return;
+    let p = "default";
+    try { p = await Notification.requestPermission(); } catch (_) {}
+    renderNotif();
+    if (p === "granted") { toast("Avisos activados"); await registrarAvisosDiarios(); syncAvisos(); }
+    else toast("No se activaron los avisos");
+  });
+  /* Chrome (Android, app instalada) puede despertar al service worker una vez por día aunque la app esté cerrada. No es seguro: lo decide Chrome. */
+  async function registrarAvisosDiarios() {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if (!reg.periodicSync) return;
+      const st = await navigator.permissions.query({ name: "periodic-background-sync" });
+      if (st.state === "granted") await reg.periodicSync.register("libreta-avisos", { minInterval: 12 * 60 * 60 * 1000 });
+    } catch (_) {}
+  }
+  /* Deja en la caché lo que necesita el service worker (que no puede leer localStorage) y le pide que revise si hay que avisar. */
+  async function syncAvisos() {
+    if (!("caches" in window) || !("serviceWorker" in navigator)) return;
+    try {
+      const a = store.auto || {};
+      const kmPorMes = a.kmPorMes || 4000;
+      const datos = {
+        km: a.kmActual ?? null, kmFecha: a.actualizado || null, kmPorMes,
+        vencimientos: store.vencimientos.filter((v) => validIso(v.fecha)).map((v) => ({ id: v.id, nombre: v.nombre, fecha: v.fecha })),
+        repuestos: store.repuestos.map((r) => ({ id: r.id, nombre: r.nombre, proximo: computePart(r, 0, kmPorMes).proximo, umbral: umbralKm(r, kmPorMes) })),
+      };
+      const c = await caches.open(AVISOS_CACHE);
+      await c.put("avisos-datos", new Response(JSON.stringify(datos), { headers: { "Content-Type": "application/json" } }));
+      if (notifSoportadas() && Notification.permission === "granted") {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg.active) reg.active.postMessage("revisar-avisos");
+      }
+    } catch (_) {}
+  }
 
   /* ---------- Contactos ---------- */
   function waLink(tel) {
@@ -661,7 +862,7 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
       ? "Todavía no hiciste ninguna copia de seguridad. Si se borra la app o cambiás de celu, se pierden los datos."
       : `Tu última copia de seguridad es de hace ${days} días.`;
   }
-  function renderAll() { renderAuto(); renderRepuestos(); renderContactos(); renderMarcas(); renderNotas(); renderBanners(); }
+  function renderAll() { renderAuto(); renderAlertas(); renderVencimientos(); renderNotif(); renderRepuestos(); renderContactos(); renderMarcas(); renderNotas(); renderBanners(); syncAvisos(); }
 
   /* ---------- Hoja: agregar / editar / borrar ---------- */
   function closeSheet() { $("#sheet-root").innerHTML = ""; }
@@ -678,10 +879,11 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
     const v = item || {};
     const fieldHtml = sc.fields.map((f) => {
       const fid = `f-${col}-${f.k}`;
-      const val = v[f.k];
+      const val = v[f.k] ?? (f.def ? f.def(v) : undefined);
       if (f.t === "check") return `<label class="check"><input id="${fid}" type="checkbox" ${val ? "checked" : ""}> ${esc(f.l)}</label>`;
       let input;
-      if (f.t === "select") input = `<select id="${fid}">${f.opts.map((o) => `<option ${o === val ? "selected" : ""}>${esc(o)}</option>`).join("")}</select>`;
+      if (f.t === "select") input = `<select id="${fid}">${f.opts.map((o) => { const ov = typeof o === "string" ? o : o.v; return `<option value="${esc(ov)}" ${ov === val ? "selected" : ""}>${esc(typeof o === "string" ? o : o.l)}</option>`; }).join("")}</select>`;
+      else if (f.t === "date") input = `<input id="${fid}" type="date" value="${validIso(val) ? val : ""}">`;
       else if (f.t === "area") input = `<textarea id="${fid}">${esc(val)}</textarea>`;
       else if (f.t === "num") input = `<input id="${fid}" type="text" inputmode="numeric" data-num value="${val != null ? fmt(val) : ""}">`;
       else input = `<input id="${fid}" type="${f.t === "url" ? "url" : "text"}" value="${esc(val)}" ${f.req ? "required" : ""}>`;
@@ -717,6 +919,7 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
         if (f.req && data[f.k] == null) { toast(`Falta completar: ${f.l}`); el.focus(); return; }
       }
       if (col === "repuestos" && data.proximoKm == null) data.proximoKm = data.ultimoKm + data.cadaKm;
+      if (col === "vencimientos" && item && item.hecha) data.hecha = item.hecha;
       const ok = save(() => {
         if (id) store[col] = store[col].map((x) => (x.id === id ? { id, ...data } : x));
         else store[col].push({ id: newId(), ...data });
@@ -809,6 +1012,7 @@ const APP_VERSION = "v6"; // igual que VERSION en sw.js: se muestra en "Datos y 
   $("#open-data").addEventListener("click", openDataSheet);
 
   renderAll();
+  if (notifSoportadas() && Notification.permission === "granted") registrarAvisosDiarios();
 
   if ("serviceWorker" in navigator) {
     // Cuando baja una versión nueva, la app se recarga sola una vez para mostrarla (antes había que abrirla dos veces).
